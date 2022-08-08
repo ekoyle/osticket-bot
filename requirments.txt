@@ -1,0 +1,5 @@
+pip install slack_sdk
+  588  pip install pymysql
+  594  pip install mysql-connector-python
+  619  pip install configparser 
+  870  pip install slack_sdk
