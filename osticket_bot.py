@@ -16,7 +16,7 @@ def report(config, channel, message):
     print("Message: %s " % message)
     client = WebClient(config['slack']['oauth_token'])
     try:
-        response = client.chat_postMessage(channel='#general', text=message)
+        response = client.chat_postMessage(channel=channel, text=message)
         print(response)
     except SlackApiError as e:
         assert e.response["ok"] is False
@@ -96,7 +96,8 @@ def main():
         print(tickets)
         for ticket in tickets:
             print(config['slack']['channel'])
-            message = "New Ticket: %s, url: https://osticket.bhnoc.org/upload/scp/tickets.php?id=%s" % (ticket[29],ticket[0])
+            url = config['default']['url'] 
+            message = "New Ticket: %s, url: https://%s/upload/scp/tickets.php?id=%s" % (ticket[29],url,ticket[0])
             report(config,config['slack']['channel'],message)
             updateTicket(config,ticket[0])
 
