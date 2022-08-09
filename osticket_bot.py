@@ -16,7 +16,7 @@ def report(config, channel, message):
     print("Message: %s " % message)
     client = WebClient(config['slack']['oauth_token'])
     try:
-        response = client.chat_postMessage(channel='#bottest', text=message)
+        response = client.chat_postMessage(channel='#general', text=message)
         print(response)
     except SlackApiError as e:
         assert e.response["ok"] is False
