@@ -18,9 +18,7 @@ docker run -d \
 	--network bhnoc \
 	-h osticket_bot \
 	--restart unless-stopped \
-	-v /home/bhnoc/configs/osticket_bot:/etc/osticket_bot \
-	-v /home/bhnoc/docker/keys:/var/www/keys \
-	-v /home/bhnoc/logs/osticket_bot:/var/log/osticket_bot/ \
+	-v $APP_PATH/logs/osticket_bot:/var/log/osticket_bot/ \
 	-v $APP_PATH/configs/$CONTAINER/config:/opt/env/live/config \
 	-v $APP_PATH/configs/$CONTAINER/logs:/opt/env/live/logs \
 	-v $APP_PATH/$CONTAINER/app:/opt/env/live/app \
