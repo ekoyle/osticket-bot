@@ -4,7 +4,7 @@ import sys
 from mysql.connector import Error
 
 config = configparser.ConfigParser()
-config.read('botconfig.ini')
+config.read('config.ini')
 print(config.sections())
 try:
     connection = mysql.connector.connect(host=config['mysql']['host'],

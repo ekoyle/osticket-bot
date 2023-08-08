@@ -5,7 +5,7 @@ HOST='osticket_bot'
 PROJECT='osticket_bot'
 DOCKER_TAG='bhnoc/osticket_bot:latest'
 CONTAINER='osticket_bot'
-APP_PATH='/Users/nemus/Desktop/git'
+APP_PATH='/Users/nemus/Desktop/git/bhnoc/'
 mkdir -p $APP_PATH/docker/configs/$CONTAINER
 docker stop osticket_bot
 docker rm osticket_bot
