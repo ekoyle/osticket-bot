@@ -1,2 +1,36 @@
 botconfig.ini
 config.ini
+.DS_Store
+*~
+*.bak
+*.swp
+*.tgz
+.idea
+.vscode
+Brewfile.lock.json
+workspace.xml
+*.iml
+*.terra*
+**/terraform.tfstate*
+
+# do not check-in secrets files
+*.yaml.dec
+secrets.*.yaml
+*-secret.yaml
+*.secret
+!**/templates/*-secret.yaml
+!secrets.template.yaml
+**/state/artifacts/*/init.json
+**/state/artifacts/*/vault.key
+*-token
+
+# Terraform stuff
+module-secrets.tfvars
+**/.terraform
+**/terraform.tfstate.backup
+**/terraform.tfstate.*.backup
+.terraform.tfstate.lock.info
+
+# Don't track any .terraform.lock.hcl files
+.terraform.lock.hcl
+
