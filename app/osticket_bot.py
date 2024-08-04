@@ -26,6 +26,9 @@ def report(config, channel, message):
 def pullTickets(config):
     tickets = None
 
+    # FIXME: make sure our table exists?
+    # create table slack_ticket ( ticket_id int unsigned not null, slack_last_notified datetime not null, PRIMARY KEY (ticket_id));
+
     try:
         connection = mysql.connector.connect(host=config['mysql']['host'],
                                          database=config['mysql']['database'],
@@ -38,19 +41,23 @@ def pullTickets(config):
             subject,
             CASE
                 WHEN closed IS NOT NULL
-                    THEN 'Closed'
+                    THEN 'Closed Ticket'
                 WHEN lastreported IS NULL
-                    THEN 'New'
+                    THEN 'New Ticket'
                 WHEN lastupdate < DATE_ADD(NOW(), INTERVAL -60 MINUTE)
-                    THEN 'Needs Update'
+                    THEN 'Update Needed for Ticket'
                 ELSE ''
             END AS slack_state
             FROM osticket_db.ost_ticket
                 JOIN osticket_db.ost_ticket__cdata
                 ON osticket_db.ost_ticket__cdata.ticket_id  = osticket_db.ost_ticket.ticket_id
+                LEFT OUTER JOIN osticket_db.slack_ticket
+                ON osticket_db.ost_ticket.ticket_id = osticket_db.slack_ticket.ticket_id
             WHERE
-                closed IS NULL AND (
-                    lastreported IS NULL OR GREATEST(lastreported, lastupdate) < DATE_ADD(NOW(), INTERVAL -60 MINUTE)
+                (
+                    slack_last_notified IS NULL
+                      OR GREATEST(slack_last_notified, lastupdate) < DATE_ADD(NOW(), INTERVAL -60 MINUTE)
+                      OR closed IS NOT NULL AND slack_last_notified < closed
                 )
 
         """
@@ -78,7 +85,10 @@ def updateTicket(config,id):
                                          password=config['mysql']['password'])
         cursor = connection.cursor(dictionary=True)
         print("Id: %s"% id)
-        update_query = """Update ost_ticket set lastreported=NOW() where ticket_id ='%s'"""
+        update_query = """
+        INSERT INTO slack_ticket (ticket_id, slack_last_notified)
+          VALUES (%s, now())
+          ON DUPLICATE KEY UPDATE"""
         input_data = (id,)
         cursor.execute(update_query,input_data)
         connection.commit()
