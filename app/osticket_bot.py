@@ -32,10 +32,29 @@ def pullTickets(config):
                                          user=config['mysql']['user'],
                                          password=config['mysql']['password'])
     
-        sql_select_Query = """ SELECT * FROM osticket_db.ost_ticket join osticket_db.ost_ticket__cdata
-                           on osticket_db.ost_ticket__cdata.ticket_id  = osticket_db.ost_ticket.ticket_id where lastreported is null
-                           """ 
-        cursor = connection.cursor()
+        sql_select_Query = """
+        SELECT
+            ost_ticket.ticket_id,
+            subject,
+            CASE
+                WHEN closed IS NOT NULL
+                    THEN 'Closed'
+                WHEN lastreported IS NULL
+                    THEN 'New'
+                WHEN lastupdate < DATE_ADD(NOW(), INTERVAL -60 MINUTE)
+                    THEN 'Needs Update'
+                ELSE ''
+            END AS slack_state
+            FROM osticket_db.ost_ticket
+                JOIN osticket_db.ost_ticket__cdata
+                ON osticket_db.ost_ticket__cdata.ticket_id  = osticket_db.ost_ticket.ticket_id
+            WHERE
+                closed IS NULL AND (
+                    lastreported IS NULL OR GREATEST(lastreported, lastupdate) < DATE_ADD(NOW(), INTERVAL -60 MINUTE)
+                )
+
+        """
+        cursor = connection.cursor(dictionary=True)
         cursor.execute(sql_select_Query)
         # get all records
         records = cursor.fetchall()
@@ -57,7 +76,7 @@ def updateTicket(config,id):
                                          database=config['mysql']['database'],
                                          user=config['mysql']['user'],
                                          password=config['mysql']['password'])
-        cursor = connection.cursor()
+        cursor = connection.cursor(dictionary=True)
         print("Id: %s"% id)
         update_query = """Update ost_ticket set lastreported=NOW() where ticket_id ='%s'"""
         input_data = (id,)
@@ -97,9 +116,12 @@ def main():
         for ticket in tickets:
             print(config['slack']['channel'])
             url = config['default']['url'] 
-            message = "New Ticket: %s, url: https://%s/upload/scp/tickets.php?id=%s" % (ticket[29],url,ticket[0])
+            message = (
+                f"{ticket['slack_state']!s:<12}: {ticket['subject']}, "
+                f"url: https://{url}/upload/scp/tickets.php?id={ticket['ticket_id']}"
+            )
             report(config,config['slack']['channel'],message)
-            updateTicket(config,ticket[0])
+            updateTicket(config,ticket[ticket["ticket_id"]])
 
 
 
