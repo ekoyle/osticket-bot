@@ -121,7 +121,7 @@ def main():
                 f"url: https://{url}/upload/scp/tickets.php?id={ticket['ticket_id']}"
             )
             report(config,config['slack']['channel'],message)
-            updateTicket(config,ticket[ticket["ticket_id"]])
+            updateTicket(config, ticket["ticket_id"])
 
 
 
