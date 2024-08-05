@@ -25,6 +25,10 @@ def report(config, channel, message):
 
 def pullTickets(config):
     tickets = None
+    print("pullTickets()")
+
+    # FIXME: make sure our table exists?
+    # create table slack_ticket ( ticket_id int unsigned not null, slack_last_notified datetime not null, PRIMARY KEY (ticket_id));
 
     try:
         connection = mysql.connector.connect(host=config['mysql']['host'],
@@ -32,25 +36,33 @@ def pullTickets(config):
                                          user=config['mysql']['user'],
                                          password=config['mysql']['password'])
     
-        sql_select_Query = """
+        interval = "-60 MINUTE"
+        sql_select_Query = f"""
         SELECT
             ost_ticket.ticket_id,
             subject,
             CASE
                 WHEN closed IS NOT NULL
-                    THEN 'Closed'
-                WHEN lastreported IS NULL
-                    THEN 'New'
-                WHEN lastupdate < DATE_ADD(NOW(), INTERVAL -60 MINUTE)
-                    THEN 'Needs Update'
+                    THEN 'Closed Ticket'
+                WHEN slack_last_notified IS NULL
+                    THEN 'New Ticket'
+                WHEN updated < DATE_ADD(NOW(), INTERVAL {interval})
+                    THEN 'Update Needed for Ticket'
                 ELSE ''
             END AS slack_state
             FROM osticket_db.ost_ticket
                 JOIN osticket_db.ost_ticket__cdata
                 ON osticket_db.ost_ticket__cdata.ticket_id  = osticket_db.ost_ticket.ticket_id
+                LEFT OUTER JOIN osticket_db.slack_ticket
+                ON osticket_db.ost_ticket.ticket_id = osticket_db.slack_ticket.ticket_id
             WHERE
-                closed IS NULL AND (
-                    lastreported IS NULL OR GREATEST(lastreported, lastupdate) < DATE_ADD(NOW(), INTERVAL -60 MINUTE)
+                (
+                    slack_last_notified IS NULL
+                      OR closed IS NULL AND (
+                        updated IS NULL
+                        OR GREATEST(slack_last_notified, updated) < DATE_ADD(NOW(), INTERVAL {interval})
+                      )
+                      OR closed IS NOT NULL AND slack_last_notified < closed
                 )
 
         """
@@ -70,6 +82,7 @@ def pullTickets(config):
     return tickets
 
 def updateTicket(config,id):
+    print(f"updateTicket({id})")
 
     try:
         connection = mysql.connector.connect(host=config['mysql']['host'],
@@ -78,7 +91,11 @@ def updateTicket(config,id):
                                          password=config['mysql']['password'])
         cursor = connection.cursor(dictionary=True)
         print("Id: %s"% id)
-        update_query = """Update ost_ticket set lastreported=NOW() where ticket_id ='%s'"""
+        update_query = """
+        INSERT INTO slack_ticket (ticket_id, slack_last_notified)
+          VALUES (%s, now())
+          ON DUPLICATE KEY UPDATE slack_last_notified = NOW()"""
+
         input_data = (id,)
         cursor.execute(update_query,input_data)
         connection.commit()
@@ -92,6 +109,7 @@ def updateTicket(config,id):
 
   
 def main():
+    print("main()")
     running = True 
 
     config = configparser.ConfigParser()
@@ -111,13 +129,13 @@ def main():
             verbose = 1
     while running: 
         tickets = pullTickets(config)
-        time.sleep(1)
+        time.sleep(10)
         print(tickets)
         for ticket in tickets:
             print(config['slack']['channel'])
             url = config['default']['url'] 
             message = (
-                f"{ticket['slack_state']!s:<12}: {ticket['subject']}, "
+                f"{ticket['slack_state']}: {ticket['subject']}, "
                 f"url: https://{url}/upload/scp/tickets.php?id={ticket['ticket_id']}"
             )
             report(config,config['slack']['channel'],message)
