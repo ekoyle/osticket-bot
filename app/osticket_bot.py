@@ -46,7 +46,7 @@ def pullTickets(config):
                     THEN 'Closed Ticket'
                 WHEN slack_last_notified IS NULL
                     THEN 'New Ticket'
-                WHEN lastupdate < DATE_ADD(NOW(), INTERVAL {interval})
+                WHEN updated < DATE_ADD(NOW(), INTERVAL {interval})
                     THEN 'Update Needed for Ticket'
                 ELSE ''
             END AS slack_state
@@ -59,8 +59,8 @@ def pullTickets(config):
                 (
                     slack_last_notified IS NULL
                       OR closed IS NULL AND (
-                        lastupdate IS NULL
-                        OR GREATEST(slack_last_notified, lastupdate) < DATE_ADD(NOW(), INTERVAL {interval})
+                        updated IS NULL
+                        OR GREATEST(slack_last_notified, updated) < DATE_ADD(NOW(), INTERVAL {interval})
                       )
                       OR closed IS NOT NULL AND slack_last_notified < closed
                 )
